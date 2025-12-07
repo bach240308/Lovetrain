@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lovetrain - Theo dõi tàu hỏa Việt Nam</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- TRACK -->
+          <section id="page-track" class="card" style="display:none">
+            <h2>Theo dõi một chuyến tàu</h2>
+            <p class="small">Xem chi tiết chuyến: hãng, tên, mã số, giờ xuất phát, dự kiến đến, tuyến và vị trí.</p>
+
+            <form id="trackForm" style="display:grid;grid-template-columns:1fr 220px;gap:10px;margin-top:10px">
+              <input id="trainNumber" type="number" min="1" placeholder="Số tàu (ví dụ: 1,5,201)" required />
+              <input id="stationFilter" type="text" placeholder="Tùy chọn: tên nhà ga" />
+              <div style="grid-column:1/-1;display:flex;gap:8px;justify-content:flex-start">
+                <button class="btn" type="submit">Tìm kiếm</button>
+                <button type="button" id="resetTrack" class="btn secondary">Đặt lại</button>
+                <button type="button" id="saveFav" class="btn secondary">Lưu mục yêu thích</button>
+              </div>
+            </form>
+
+            <div id="trackResult" style="margin-top:12px"></div>
+          </section>

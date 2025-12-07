@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lovetrain - Theo dõi tàu hỏa Việt Nam</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo" style="background:none"><img src="https://cdn-icons-png.flaticon.com/512/809/809957.png" style="width:52px;height:52px"/></div>
+        <div>
+          <div style="font-weight:700">Lovetrain</div>
+          <div class="muted" style="font-size:13px">Theo dõi tàu hỏa ở Việt Nam</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;align-items:center">
+        <nav id="nav">
+          <button class="nav-btn active" data-route="home">Trang chủ</button>
+          <button class="nav-btn" data-route="track">Theo dõi tàu</button>
+          <button class="nav-btn" data-route="schedules">Lịch trình</button>
+          <button class="nav-btn" data-route="map">Bản đồ</button>
+        </nav>
+        <div class="auth">
+          <div id="greeting" style="font-size:14px;color:var(--muted);display:none">Xin chào, <strong id="userName"></strong></div>
+          <button id="loginBtn" class="btn">Đăng nhập</button>
+          <button id="logoutBtn" class="btn secondary" style="display:none">Đăng xuất</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div id="pages" class="grid cols-2">
+        <!-- LEFT -->
+        <div id="left">
+          <!-- HOME -->
+          <section id="page-home" class="card">
+            <h1>Chào mừng đến với Lovetrain</h1>
+            <p class="small">Tìm tàu, xem lịch trình và theo dõi vị trí trên bản đồ.</p>
+
+            <div style="margin-top:12px;display:flex;gap:12px;align-items:center">
+              <div class="card" style="flex:1">
+                <h2 style="font-size:16px">Tìm nhanh</h2>
+                <p class="small">Nhập số tàu để xem thông tin tóm tắt. Ví dụ: 1,5,201</p>
+                <div style="display:flex;gap:8px">
+                  <input id="quickNum" type="number" min="1" value="1" />
+                  <button id="quickTrack" class="btn">Tìm</button>
+                </div>
+                <div id="quickResult" style="margin-top:10px"></div>
+              </div>
+
+              <div class="card" style="width:260px;display:flex;flex-direction:column;gap:8px;justify-content:center;align-items:flex-start">
+                <div style="font-weight:600">Tại sao Lovetrain?</div>
+                <div class="muted">• Giao diện trực quan<br>• Lưu yêu thích trên trình duyệt<br>• Hiển thị tuyến và vị trí hiện tại</div>
+              </div>
+            </div>
+          </section>

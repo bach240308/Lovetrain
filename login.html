@@ -1,0 +1,27 @@
+       <!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lovetrain - Theo dõi tàu hỏa Việt Nam</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Login Modal -->
+  <div id="modal" style="display:none">
+    <div class="modal-back" style="position:fixed;inset:0;background:rgba(2,6,23,0.45);display:flex;align-items:center;justify-content:center">
+      <div class="modal card" style="width:360px;padding:18px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-weight:700">Đăng nhập</div>
+          <button id="closeModal" class="nav-btn">Đóng</button>
+        </div>
+        <label class="muted">Tên</label>
+        <input id="loginName" placeholder="Tên của bạn" style="margin-top:8px" />
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+          <button id="doLogin" class="btn">Đăng nhập</button>
+          <button id="guestLogin" class="btn secondary">Tiếp tục với tư cách khách</button>
+        </div>
+        <p class="muted" style="margin-top:12px">Bản demo này chỉ sử dụng localStorage. Đối với sản xuất, hãy áp dụng OAuth hoặc mã thông báo phiên phụ trợ.</p>
+      </div>
+    </div>
+  </div>
