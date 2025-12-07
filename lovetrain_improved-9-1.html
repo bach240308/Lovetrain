@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lovetrain - Theo dõi tàu hỏa Việt Nam</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root{ --pink:#f43f5e; --muted:#6b7280; --card:#ffffff; --bg:#f8fafc; --accent:#fb7185; --glass: rgba(255,255,255,0.8); font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial; }
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#f0f7ff 0%, #f8fafc 35%, #fff 100%);color:#0f172a}
+    /* decorative background */
+    body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(rgba(244,63,94,0.04) 1px, transparent 1px);background-size:60px 60px;opacity:0.9;pointer-events:none}
+    .container{max-width:1200px;margin:28px auto;padding:20px}
+    header{background:rgba(255,255,255,0.9);backdrop-filter:blur(6px);border-radius:14px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 10px 30px rgba(2,6,23,0.06)}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,var(--pink),var(--accent));display:flex;align-items:center;justify-content:center;color:white;font-weight:800}
+    nav{display:flex;gap:8px;align-items:center}
+    .nav-btn{background:transparent;border:0;padding:8px 12px;border-radius:10px;color:var(--muted);cursor:pointer}
+    .nav-btn.active{background:rgba(244,63,94,0.08);color:var(--pink);font-weight:600}
+    .auth{display:flex;gap:8px;align-items:center}
+    .btn{background:var(--pink);color:white;padding:8px 12px;border-radius:10px;border:0;cursor:pointer}
+    .btn.secondary{background:#eef2ff;color:#1e293b}
+    main{margin-top:18px}
+    .grid{display:grid;gap:16px}
+    .cols-2{grid-template-columns:1fr 380px}
+    .card{background:var(--card);padding:16px;border-radius:12px;box-shadow:0 10px 30px rgba(2,6,23,0.05)}
+    h1,h2{margin:0 0 8px 0}
+    p.small{color:var(--muted);margin:0 0 8px 0;font-size:14px}
+    input,select{width:100%;padding:10px;border-radius:10px;border:1px solid #e6eef6;font-size:14px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;text-align:left;border-bottom:1px solid #f1f5f9;font-size:14px}
+    .stop-status{color:var(--muted);font-size:13px}
+    footer{margin-top:22px;text-align:center;color:var(--muted);font-size:13px}
+    .pill{display:inline-block;padding:6px 8px;border-radius:999px;background:#f1f5f9;color:var(--muted);font-size:13px}
+    /* map */
+    #lovetrain-map, #track-map {height:420px;border-radius:10px;}
+    /* small helpers */
+    .muted{color:var(--muted)}
+    .train-card{padding:10px;border-radius:10px;background:linear-gradient(180deg,#ffffff,#fff7f8);box-shadow:0 6px 18px rgba(244,63,94,0.06)}
+    /* responsive */
+    @media (max-width:900px){.cols-2{grid-template-columns:1fr}header{flex-direction:column;gap:12px;align-items:stretch}nav{flex-wrap:wrap}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo" style="background:none"><img src="https://cdn-icons-png.flaticon.com/512/809/809957.png" style="width:52px;height:52px"/></div>
+        <div>
+          <div style="font-weight:700">Lovetrain</div>
+          <div class="muted" style="font-size:13px">Theo dõi tàu hỏa ở Việt Nam</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;align-items:center">
+        <nav id="nav">
+          <button class="nav-btn active" data-route="home">Trang chủ</button>
+          <button class="nav-btn" data-route="track">Theo dõi tàu</button>
+          <button class="nav-btn" data-route="schedules">Lịch trình</button>
+          <button class="nav-btn" data-route="map">Bản đồ</button>
+        </nav>
+        <div class="auth">
+          <div id="greeting" style="font-size:14px;color:var(--muted);display:none">Xin chào, <strong id="userName"></strong></div>
+          <button id="loginBtn" class="btn">Đăng nhập</button>
+          <button id="logoutBtn" class="btn secondary" style="display:none">Đăng xuất</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div id="pages" class="grid cols-2">
+        <!-- LEFT -->
+        <div id="left">
+          <!-- HOME -->
+          <section id="page-home" class="card">
+            <h1>Chào mừng đến với Lovetrain</h1>
+            <p class="small">Tìm tàu, xem lịch trình và theo dõi vị trí trên bản đồ.</p>
+
+            <div style="margin-top:12px;display:flex;gap:12px;align-items:center">
+              <div class="card" style="flex:1">
+                <h2 style="font-size:16px">Tìm nhanh</h2>
+                <p class="small">Nhập số tàu để xem thông tin tóm tắt. Ví dụ: 1,5,201</p>
+                <div style="display:flex;gap:8px">
+                  <input id="quickNum" type="number" min="1" value="1" />
+                  <button id="quickTrack" class="btn">Tìm</button>
+                </div>
+                <div id="quickResult" style="margin-top:10px"></div>
+              </div>
+
+              <div class="card" style="width:260px;display:flex;flex-direction:column;gap:8px;justify-content:center;align-items:flex-start">
+                <div style="font-weight:600">Tại sao Lovetrain?</div>
+                <div class="muted">• Giao diện trực quan<br>• Lưu yêu thích trên trình duyệt<br>• Hiển thị tuyến và vị trí hiện tại</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- TRACK -->
+          <section id="page-track" class="card" style="display:none">
+            <h2>Theo dõi một chuyến tàu</h2>
+            <p class="small">Xem chi tiết chuyến: hãng, tên, mã số, giờ xuất phát, dự kiến đến, tuyến và vị trí.</p>
+
+            <form id="trackForm" style="display:grid;grid-template-columns:1fr 220px;gap:10px;margin-top:10px">
+              <input id="trainNumber" type="number" min="1" placeholder="Số tàu (ví dụ: 1,5,201)" required />
+              <input id="stationFilter" type="text" placeholder="Tùy chọn: tên nhà ga" />
+              <div style="grid-column:1/-1;display:flex;gap:8px;justify-content:flex-start">
+                <button class="btn" type="submit">Tìm kiếm</button>
+                <button type="button" id="resetTrack" class="btn secondary">Đặt lại</button>
+                <button type="button" id="saveFav" class="btn secondary">Lưu mục yêu thích</button>
+              </div>
+            </form>
+
+            <div id="trackResult" style="margin-top:12px"></div>
+          </section>
+
+          <!-- Schedules -->
+          <section id="page-schedules" class="card" style="display:none">
+            <h2>Lịch trình</h2>
+            <p class="small">Ví dụ lịch trình chạy cố định.</p>
+            <table style="margin-top:10px">
+              <thead><tr><th>Tàu</th><th>Từ</th><th>Đến</th><th>Khởi hành</th></tr></thead>
+              <tbody id="schedBody">
+                <tr><td>SE1</td><td>Hà Nội</td><td>Hồ Chí Minh</td><td>06:00</td></tr>
+                <tr><td>SE3</td><td>Hà Nội</td><td>Hồ Chí Minh</td><td>14:00</td></tr>
+                <tr><td>SNT2</td><td>Đà Nẵng</td><td>Nha Trang</td><td>08:30</td></tr>
+              </tbody>
+            </table>
+          </section>
+
+          <!-- MAP -->
+          <section id="page-map" class="card" style="display:none">
+            <h2>Bản đồ</h2>
+            <p class="small">Các chuyến tàu đang hoạt động (6–12 chuyến) trên tuyến đường sắt Việt Nam.</p>
+            <div id="lovetrain-map"></div>
+            <div style="margin-top:10px" class="muted">Mẹo: các chấm màu xanh là tàu, nhấp để xem chi tiết.</div>
+          </section>
+        </div>
+
+        <!-- RIGHT: sidebar -->
+        <aside id="right" class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-weight:700">Yêu thích</div>
+              <div class="muted">Các chuyến tàu đã lưu trong trình duyệt của bạn</div>
+            </div>
+            <button id="clearFav" class="btn secondary">Xóa</button>
+          </div>
+
+          <div id="favList" style="margin-top:12px"></div>
+
+          <hr style="margin:14px 0;border:none;border-top:1px solid #eef2f7">
+
+          <div>
+            <div style="font-weight:700">Trạng thái</div>
+            <div class="muted" style="margin-top:6px">Cập nhật mock (demo).</div>
+          </div>
+
+        </aside>
+      </div>
+
+      <footer>
+        © <span id="year"></span> Lovetrain - Được tạo bởi Quang Bach, Tung Duong, Vi Khang, Truong An và Tien Danh.
+      </footer>
+    </main>
+  </div>
+
+  <!-- Login Modal -->
+  <div id="modal" style="display:none">
+    <div class="modal-back" style="position:fixed;inset:0;background:rgba(2,6,23,0.45);display:flex;align-items:center;justify-content:center">
+      <div class="modal card" style="width:360px;padding:18px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-weight:700">Đăng nhập</div>
+          <button id="closeModal" class="nav-btn">Đóng</button>
+        </div>
+        <label class="muted">Tên</label>
+        <input id="loginName" placeholder="Tên của bạn" style="margin-top:8px" />
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+          <button id="doLogin" class="btn">Đăng nhập</button>
+          <button id="guestLogin" class="btn secondary">Tiếp tục với tư cách khách</button>
+        </div>
+        <p class="muted" style="margin-top:12px">Bản demo này chỉ sử dụng localStorage. Đối với sản xuất, hãy áp dụng OAuth hoặc mã thông báo phiên phụ trợ.</p>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ---------- Utilities & state ----------
+const pages = {
+  home: document.getElementById('page-home'),
+  track: document.getElementById('page-track'),
+  schedules: document.getElementById('page-schedules'),
+  map: document.getElementById('page-map')
+};
+const navButtons = document.querySelectorAll('[data-route]');
+const yearSpan = document.getElementById('year'); yearSpan.textContent = new Date().getFullYear();
+
+// LocalStorage keys
+const USER_KEY = 'lovetrain_user';
+const FAV_KEY = 'lovetrain_favs';
+
+// Simple seeded RNG so searches are repeatable per train number
+function seededRandom(seed){ let x = Math.sin(seed) * 10000; return x - Math.floor(x); }
+function seededChoice(seed, arr){ return arr[Math.floor(seededRandom(seed)*arr.length)]; }
+
+// ---------- Stations data (30 sample stations across VN) ----------
+const STATIONS = [
+  {name:'Hanoi', lat:21.0285, lon:105.8542}, {name:'Hai Phong', lat:20.8449, lon:106.6881}, {name:'Vinh', lat:18.6714, lon:105.6819},
+  {name:'Dong Hoi', lat:17.4714, lon:106.6083}, {name:'Hue', lat:16.4637, lon:107.5909}, {name:'Da Nang', lat:16.0544, lon:108.2022},
+  {name:'Quang Ngai', lat:15.1200, lon:108.7929}, {name:'Qui Nhon', lat:13.7825, lon:109.2191}, {name:'Nha Trang', lat:12.2388, lon:109.1967},
+  {name:'Phan Thiet', lat:10.9284, lon:108.1000}, {name:'Vung Tau', lat:10.4114, lon:107.1362}, {name:'Ho Chi Minh City', lat:10.8231, lon:106.6297},
+  {name:'Can Tho', lat:10.0452, lon:105.7469}, {name:'Rach Gia', lat:9.9885, lon:105.1159}, {name:'Ca Mau', lat:9.1765, lon:105.1411},
+  {name:'Lang Son', lat:21.8566, lon:106.7593}, {name:'Thanh Hoa', lat:19.8067, lon:105.7760}, {name:'Dong Hanh', lat:17.0, lon:107.0},
+  {name:'Tam Ky', lat:15.5730, lon:108.4810}, {name:'Kon Tum', lat:14.3500, lon:107.9833}, {name:'Pleiku', lat:13.9798, lon:108.0000},
+  {name:'Buon Ma Thuot', lat:12.6667, lon:108.0333}, {name:'Rach Gia', lat:9.9975, lon:105.1128}, {name:'Ha Tinh', lat:18.3464, lon:105.9059},
+  {name:'Binh Thuan', lat:11.2525, lon:108.7596}, {name:'Dien Bien', lat:21.3853, lon:103.0139}, {name:'Lao Cai', lat:22.4850, lon:103.9850},
+  {name:'Sa Pa', lat:22.3380, lon:103.8448}, {name:'Vinh Long', lat:10.2490, lon:105.9645}
+];
+
+// ---------- Navigation with animation ----------
+function showRoute(route){
+  Object.values(pages).forEach(p => { p.style.display = 'none'; p.style.opacity = 0; });
+  const page = pages[route];
+  page.style.display = '';
+  setTimeout(()=>{ page.style.transition = '250ms'; page.style.opacity = 1; },10);
+  navButtons.forEach(b => b.classList.toggle('active', b.dataset.route === route));
+  // if moving to map, refresh visible trains
+  if(route === 'map') refreshMapTrains();
+}
+navButtons.forEach(b => b.addEventListener('click', ()=> showRoute(b.dataset.route)));
+showRoute('home');
+
+// ---------- Auth & favorites (localStorage) ----------
+function getUser(){ try{ return JSON.parse(localStorage.getItem(USER_KEY)); }catch(e){return null;} }
+function setUser(u){ localStorage.setItem(USER_KEY, JSON.stringify(u)); updateAuthUI(); }
+function clearUser(){ localStorage.removeItem(USER_KEY); updateAuthUI(); }
+function getFavs(){ try{ return JSON.parse(localStorage.getItem(FAV_KEY)) || []; }catch(e){return []; } }
+function setFavs(arr){ localStorage.setItem(FAV_KEY, JSON.stringify(arr)); renderFavorites(); }
+function renderFavorites(){ const favs = getFavs(); const favList = document.getElementById('favList'); if(!favs.length){ favList.innerHTML = '<div class="muted">Chưa có mục yêu thích nào.</div>'; return; } favList.innerHTML = favs.map(f=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0"><div><strong>${f.trainNumber}</strong><div class="muted" style="font-size:12px">${f.name||''}</div></div><div style="display:flex;gap:6px"><button data-remove="${f.trainNumber}" class="btn secondary" style="padding:6px;border-radius:8px">Xóa</button></div></div>`).join(''); favList.querySelectorAll('[data-remove]').forEach(btn=>btn.addEventListener('click',()=>{ const tn = btn.dataset.remove; setFavs(getFavs().filter(x=>String(x.trainNumber)!==String(tn))); })); }
+
+function updateAuthUI(){ const u = getUser(); const greeting = document.getElementById('greeting'); const loginBtn = document.getElementById('loginBtn'); const logoutBtn = document.getElementById('logoutBtn'); const userName = document.getElementById('userName'); if(u){ greeting.style.display='block'; userName.textContent = u.name; loginBtn.style.display='none'; logoutBtn.style.display='inline-block'; } else { greeting.style.display='none'; loginBtn.style.display='inline-block'; logoutBtn.style.display='none'; } renderFavorites(); }
+
+// login modal
+const loginBtn = document.getElementById('loginBtn'); const logoutBtn = document.getElementById('logoutBtn'); const modal = document.getElementById('modal'); const doLogin = document.getElementById('doLogin'); const guestLogin = document.getElementById('guestLogin'); const closeModal = document.getElementById('closeModal'); const loginName = document.getElementById('loginName');
+loginBtn.addEventListener('click', ()=> modal.style.display = ''); closeModal && closeModal.addEventListener('click', ()=> modal.style.display = 'none'); doLogin && doLogin.addEventListener('click', ()=>{ const name = (loginName.value||'Guest').trim(); setUser({name,id:Date.now()}); modal.style.display='none'; loginName.value = ''; }); guestLogin && guestLogin.addEventListener('click', ()=>{ setUser({name:'Guest',id:Date.now()}); modal.style.display='none'; }); logoutBtn.addEventListener('click', ()=>{ clearUser(); }); updateAuthUI();
+
+// ---------- Mock API for train details ----------
+const COMPANIES = ['Vietnam Railways','TransViet','Saigon Express','Annam Rail'];
+const TRAIN_NAMES = ['Reunification Express','Coastal Connector','Mountain Liner','Sunrise Limited','Emerald Express','Delta Runner'];
+
+function generateTrainDetails(number){
+  const seed = Number(number) || Math.floor(Math.random()*9999);
+  const company = seededChoice(seed + 1, COMPANIES);
+  const name = seededChoice(seed + 2, TRAIN_NAMES);
+  const trainNumber = String(number);
+  const idxFrom = Math.floor(seededRandom(seed+3)*STATIONS.length);
+  let idxTo = Math.floor(seededRandom(seed+4)*STATIONS.length);
+  if(idxTo === idxFrom) idxTo = (idxTo+5)%STATIONS.length;
+  const from = STATIONS[idxFrom];
+  const to = STATIONS[idxTo];
+  // timings: depart now +/- random hours, duration random 6-30 hours
+  const departOffsetH = Math.floor(seededRandom(seed+5)*24)-6; // -6..+17
+  const depart = new Date(Date.now() + departOffsetH*3600*1000);
+  const durationH = 6 + Math.floor(seededRandom(seed+6)*25);
+  const eta = new Date(depart.getTime() + durationH*3600*1000);
+  const status = (seededRandom(seed+7) > 0.7) ? 'Delayed' : 'On time';
+  const delayMinutes = status==='Delayed' ? Math.floor(seededRandom(seed+8)*120)+5 : 0;
+
+  // route: pick 6-12 stations sequentially between indices (simulate path along coast)
+  const route = [];
+  const count = 6 + Math.floor(seededRandom(seed+9)*7); // 6..12
+  for(let i=0;i<count;i++){
+    const sidx = Math.floor(seededRandom(seed+10+i)*STATIONS.length);
+    route.push({...STATIONS[sidx], stopOrder:i+1, arrive: '-', depart: '-'});
+  }
+  // current position: one of the route points or between them
+  const curIndex = Math.floor(seededRandom(seed+30)*route.length);
+  const progress = seededRandom(seed+31); // 0..1 between curIndex and next
+  const currentPos = interpolate(route[curIndex], route[(curIndex+1)%route.length], progress);
+
+  // assemble stops with times (mocked)
+  let routeTime = new Date(depart.getTime());
+  const stops = route.map((st,i)=>{
+    const dwell = 5 + Math.floor(seededRandom(seed+40+i)*20); // minutes
+    const arrive = new Date(routeTime.getTime() + Math.floor(seededRandom(seed+50+i)*60)*60000);
+    const departT = new Date(arrive.getTime() + dwell*60000);
+    routeTime = new Date(departT.getTime() + Math.floor(seededRandom(seed+60+i)*180)*60000);
+    return {station:st.name, arrive:arrive.toTimeString().slice(0,5), depart:departT.toTimeString().slice(0,5), lat:st.lat, lon:st.lon};
+  });
+
+  return { company, name, trainNumber, depart, eta, from:from.name, to:to.name, status, delayMinutes, route, stops, currentPos };
+}
+
+function interpolate(a,b,t){ if(!a||!b) return a||b||{lat:0,lon:0}; return {lat: a.lat + (b.lat - a.lat)*t, lon: a.lon + (b.lon - a.lon)*t}; }
+
+// ---------- Rendering track result (full details + map) ----------
+async function renderFullTrain(number){
+  const details = generateTrainDetails(number);
+  const container = document.getElementById('trackResult');
+  container.innerHTML = `<div class="train-card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-weight:700">${details.company} — ${details.name}</div>
+      <div class="muted">Mã: ${details.trainNumber} • ${details.from} → ${details.to}</div></div>
+      <div style="text-align:right"><div class="muted">Trạng thái</div><div style="font-weight:700">${details.status}${details.delayMinutes?(' • Delay '+details.delayMinutes+' phút'):''}</div></div>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:12px">
+      <div style="flex:1">
+        <div class="muted">Xuất phát</div>
+        <div style="font-weight:700">${details.depart.toLocaleString()}</div>
+        <div class="muted" style="margin-top:8px">Dự kiến đến</div>
+        <div style="font-weight:700">${details.eta.toLocaleString()}</div>
+      </div>
+      <div style="width:360px">
+        <div class="muted">Tuyến & vị trí hiện tại</div>
+        <div id="track-map" style="height:220px;margin-top:8px;border-radius:8px;overflow:hidden"></div>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <div class="muted">Danh sách ga (tóm tắt)</div>
+      <table style="margin-top:8px"><thead><tr><th>Ga</th><th>Đến</th><th>Đi</th></tr></thead><tbody>${details.stops.map(s=>`<tr><td>${s.station}</td><td>${s.arrive}</td><td>${s.depart}</td></tr>`).join('')}</tbody></table>
+    </div>
+  </div>`;
+
+  // create map and route
+  setTimeout(()=>{
+    const m = L.map('track-map',{zoomControl:false,attributionControl:false}).setView([details.currentPos.lat, details.currentPos.lon],6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(m);
+    const latlngs = details.route.map(r=>[r.lat,r.lon]);
+    L.polyline(latlngs,{color:'#f43f5e'}).addTo(m);
+    // add stops markers
+    details.route.forEach((r,i)=>{ L.circleMarker([r.lat,r.lon],{radius:5}).addTo(m).bindPopup(`${r.name||r.station}`); });
+    // current pos marker
+    const icon = L.divIcon({className:'',html:`<div style="background:#1e40af;padding:6px;border-radius:8px;color:#fff;font-size:12px">${details.trainNumber}</div>`});
+    const marker = L.marker([details.currentPos.lat,details.currentPos.lon],{icon}).addTo(m).bindPopup(`${details.trainNumber} • ${details.status}`);
+    // fit bounds
+    const bounds = L.latLngBounds(latlngs);
+    m.fitBounds(bounds.pad(0.25));
+  },50);
+}
+
+// ---------- Home quick search (short info) ----------
+const quickTrackBtn = document.getElementById('quickTrack');
+quickTrackBtn.addEventListener('click', ()=>{
+  const num = document.getElementById('quickNum').value || 1;
+  const d = generateTrainDetails(num);
+  const out = document.getElementById('quickResult');
+  out.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:700">${d.trainNumber} — ${d.name}</div><div class="muted">${d.company} • ${d.from} → ${d.to}</div></div><div style="text-align:right"><div class="muted">Status</div><div style="font-weight:700">${d.status}${d.delayMinutes?(' • Delay '+d.delayMinutes+'m'):''}</div><button class="btn" style="margin-top:8px" id="gotoFull${d.trainNumber}">Xem chi tiết</button></div></div>`;
+  document.getElementById(`gotoFull${d.trainNumber}`).addEventListener('click', ()=>{ document.getElementById('trainNumber').value = d.trainNumber; showRoute('track'); renderFullTrain(d.trainNumber); });
+});
+
+// ---------- Track form submit ----------
+const trackForm = document.getElementById('trackForm'); const trainNumberInput = document.getElementById('trainNumber'); const stationFilterInput = document.getElementById('stationFilter'); const trackResult = document.getElementById('trackResult');
+trackForm.addEventListener('submit', (e)=>{ e.preventDefault(); const tn = trainNumberInput.value.trim(); if(!tn) return alert('Nhập số tàu'); renderFullTrain(tn); });
+
+// reset & save fav
+document.getElementById('resetTrack').addEventListener('click', ()=>{ trainNumberInput.value=''; stationFilterInput.value=''; trackResult.innerHTML=''; });
+document.getElementById('saveFav').addEventListener('click', ()=>{ const tn = trainNumberInput.value.trim(); if(!tn) return alert('Nhập số tàu trước'); const det = generateTrainDetails(tn); const favs = getFavs(); if(favs.some(f=>String(f.trainNumber)===String(tn))) return alert('Đã có trong mục yêu thích'); favs.push({trainNumber:tn,name:det.name,savedAt:new Date().toISOString()}); setFavs(favs); alert('Đã lưu'); });
+
+// ---------- Map: show 6-12 trains moving randomly ----------
+let mapGlobal = null; let trainsOnMap = [];
+function initMainMap(){ mapGlobal = L.map('lovetrain-map').setView([16.2,107.5],5); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapGlobal); }
+initMainMap();
+
+function randomInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+function createMovingTrains(){ // create random 6-12 trains
+  const N = 6 + randomInt(0,6);
+  trainsOnMap.forEach(t=>{ if(t.marker) mapGlobal.removeLayer(t.marker); if(t.poly) mapGlobal.removeLayer(t.poly); }); trainsOnMap = [];
+  for(let i=0;i<N;i++){
+    const tn = randomInt(1,999);
+    const det = generateTrainDetails(tn);
+    // generate a route polyline
+    const routePoints = det.route.map(r=>[r.lat,r.lon]);
+    const poly = L.polyline(routePoints,{color:'#10b981',opacity:0.6}).addTo(mapGlobal);
+    // place marker at a random point along poly
+    let seg = randomInt(0,routePoints.length-1);
+    let tprogress = Math.random();
+    const lat = routePoints[seg][0] + (routePoints[(seg+1)%routePoints.length][0]-routePoints[seg][0])*tprogress;
+    const lon = routePoints[seg][1] + (routePoints[(seg+1)%routePoints.length][1]-routePoints[seg][1])*tprogress;
+    const icon = L.divIcon({html:`<div style="background:#1e40af;color:#fff;padding:6px;border-radius:8px;font-size:12px">${det.trainNumber}</div>`});
+    const marker = L.marker([lat,lon],{icon}).addTo(mapGlobal).bindPopup(`<strong>${det.trainNumber}</strong><br>${det.name}<br>${det.from} → ${det.to}<br>Status: ${det.status}`);
+    trainsOnMap.push({trainNumber:det.trainNumber,det,poly,marker,seg,tprogress});
+  }
+}
+createMovingTrains();
+
+// animate trains: every 2s update position along their route
+setInterval(()=>{
+  trainsOnMap.forEach(t=>{
+    const pts = t.det.route.map(r=>[r.lat,r.lon]);
+    t.tprogress += 0.03 + Math.random()*0.04; if(t.tprogress >= 1){ t.tprogress = 0; t.seg = (t.seg+1)%pts.length; }
+    const a = pts[t.seg]; const b = pts[(t.seg+1)%pts.length];
+    const lat = a[0] + (b[0]-a[0]) * t.tprogress; const lon = a[1] + (b[1]-a[1]) * t.tprogress;
+    t.marker.setLatLng([lat,lon]);
+    // update popup content occasionally
+    if(Math.random()>0.9) t.marker.setPopupContent(`<strong>${t.det.trainNumber}</strong><br>${t.det.name}<br>${t.det.from} → ${t.det.to}<br>Status: ${t.det.status}`);
+  });
+},2000);
+
+function refreshMapTrains(){ if(!mapGlobal) initMainMap(); // ensure map created
+  // each time map page opened, re-center & re-create trains for demo
+  mapGlobal.setView([16.2,107.5],5);
+}
+
+// ---------- helpers ----------
+function interpolatePos(a,b,t){ return {lat:a.lat+(b.lat-a.lat)*t, lon:a.lon+(b.lon-a.lon)*t}; }
+
+// expose to console
+window.Lovetrain = { generateTrainDetails, renderFullTrain, getFavs, setFavs };
+
+// initial render favorites
+renderFavorites();
+</script>
+  <button id="darkModeBtn" style="position:fixed;right:18px;bottom:18px;padding:10px 14px;border-radius:10px;border:0;background:#0f172a;color:#fff;cursor:pointer;z-index:9999">Dark mode</button>
+<script>
+let dark=false;document.getElementById('darkModeBtn').onclick=()=>{
+ dark=!dark;
+ document.body.style.filter=dark?'invert(1) hue-rotate(180deg)':'none';
+ document.getElementById('darkModeBtn').textContent=dark?'Light mode':'Dark mode';
+};
+</script>
+</body>
+</html>
